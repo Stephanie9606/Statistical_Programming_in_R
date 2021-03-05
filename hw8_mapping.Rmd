@@ -1,0 +1,215 @@
+---
+title: "hw_8"
+author: "Sihyuan_Han"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Covid Analysis
+
+* 1-1,2 
+```{r}
+library(readr)
+library(tidyverse)
+library(usmap)
+library(ggplot2)
+us_covid_data <- read_csv("../R_data/us-counties.csv")
+us_covid_data %>% 
+  saveRDS("../R_output/us-counties.rds")
+us_covid <- readRDS("../R_output/us-counties.rds")
+```
+
+* 1-3 How many rows of data are there and what is the most recent date?
+```{r}
+nrow(us_covid)
+head(us_covid)
+max(us_covid$date)
+```
+
+* 1-4
+```{r}
+read_csv("../R_data/us-counties.csv",
+         col_types = cols(
+           county = col_factor(),
+           state = col_factor()
+         )) ->
+  c_data
+c_data %>% 
+  arrange(state, county) ->
+  c_data
+nlevels(c_data$county)
+nlevels(c_data$state)
+```
+
+* 1-4-d How many unique combinations of county and state are there?
+```{r}
+nrow(unique(c_data[,c("county","state")]))
+```
+
+* 1-5 Many county names appear in multiple states
+```{r}
+c_data %>% 
+  filter(county != "Unknown") %>% 
+  group_by(county) %>% 
+  summarise(count = length(unique(state))) %>% 
+  arrange(desc(count)) %>% 
+  head()
+```
+
+* 1-6 Daily cumulative data
+```{r}
+c_data %>% 
+  arrange(state, county, date) %>% 
+  group_by(state, county) %>% 
+  mutate(first_date = min(date),
+         first_case = cases[date == first_date],
+         first_death = deaths[date == first_date],
+         daily_cases = c(min(first_case),diff(cases)),
+         daily_deaths = c(min(first_death),diff(deaths))) %>% 
+  select(date, county, state, fips, cases, daily_cases, deaths, daily_deaths) ->
+  c_daily_data
+head(c_daily_data)
+# check Hawaii
+c_daily_data %>% 
+  filter(county == "Maui") %>% 
+  tail(n=10)
+```
+
+* 1-7 Create a data frame with the daily totals for cases and deaths by state
+
++ interpret 1: For the daily cases plot, we can see in the beginning New York has a lot of cases and then they tend to control it. In the middle of the year, Florida and California has lots of cases. And then After FL and CA we can see Texas and Georgia also went high around October, and recently Illinois went up high too. 
+
++ interpret 2: For the daily deaths plot, NY has the highest death of covid when it first burst out, and then they control it. NJ bursts out lots of death around June and July then Texas occurs more death too after NJ. 
+```{r}
+c_daily_data %>% 
+  group_by(date, state) %>% 
+  summarise(daily_c_by_state = sum(daily_cases),
+            daily_d_by_state = sum(daily_deaths)) ->
+  daily_data_by_state
+
+# Use this to create a line plot with the daily cases color coded by state
+daily_data_by_state %>% 
+  ggplot(aes(x = date, y = daily_c_by_state)) + 
+  geom_line(aes(color = state)) +
+  theme(legend.position="remove") +
+  geom_text(data = 
+              daily_data_by_state %>% 
+              filter(daily_c_by_state < -1000 | daily_c_by_state > 10000),
+            aes(label = state))
+
+# Use this to create a line plot with the daily deaths color coded by state
+daily_data_by_state %>% 
+  ggplot(aes(x = date, y = daily_d_by_state)) + 
+  geom_line(aes(color = state)) +
+  theme(legend.position="remove") +
+  geom_text(data = 
+              daily_data_by_state %>% 
+              filter(daily_d_by_state > 1000),
+            aes(label = state))
+```
+
+* 1-8 Find the top 5 states and then the top five counties in terms of total deaths
+```{r}
+# top 5 states
+c_daily_data %>% 
+  group_by(state) %>% 
+  summarise(state_total_death = sum(daily_deaths), 
+            record = n()) %>% 
+  arrange(desc(state_total_death)) %>% 
+  head(n=5)
+# top 5 counties
+c_daily_data %>% 
+  group_by(state, county) %>% 
+  summarise(county_total_death = sum(daily_deaths), 
+            record = n()) %>% 
+  arrange(desc(county_total_death)) %>% 
+  head(n=5)
+```
+
+* 1-9 DMV Data
+
++ interpret: As we can see from the plot that around may and June three states are having most cases , especially MD has the highest cases in DMV area at that time. The daily cases starts to go down after the middle of the year and it comes back high recently.  
+```{r, warning = FALSE}
+c_daily_data %>% 
+  filter(state == "Virginia") %>% 
+  filter(county != "Frederick") %>% 
+  filter(county != "Montgomery") ->
+  c_va_df
+c_daily_data %>% 
+  filter(state == "District of Columbia" | state == "Maryland") %>% 
+  rbind(c_va_df) -> define_dmv_data
+define_dmv_data %>% 
+  filter(county == c("Anne Arundel", "Charles", "Frederick", "Howard", "Montgomery", "Prince George's", "Alexandria city", "Arlington", "Fairfax city", "Fairfax", "Loudoun", "Manassas", "Manassas city", "Manassas Park city", "Prince William", "District of Columbia")) -> full_df_dmv 
+
+full_df_dmv %>% 
+  group_by(date, county, state) %>% 
+  summarise(county_total_cases = sum(daily_cases),
+            county_total_deaths = sum(daily_deaths)) ->
+  df_dmv
+ 
+df_dmv %>% 
+  ggplot(aes(x = date, y = county_total_cases)) +
+  geom_line() +
+  scale_y_log10() +
+  facet_wrap( ~state)
+```
+
+# Maps
+
+* 2-1 Load the usmap package
+```{r}
+library(usmap)
+```
+
+* 2-2 Use a tidyverse function to create a variable with the FIPS codes for the DMV
+
+```{r}
+full_df_dmv %>% 
+  select(county, fips) %>% 
+  unique() -> df_dmv_fips
+
+as.numeric(df_dmv_fips$fips) -> dmv_fips
+dmv_fips
+```
+
+* 2-3 Plot the counties along with their names and a title
+```{r}
+plot_usmap(regions = "counties", include = dmv_fips, labels = TRUE) + 
+  labs(title = "DMV counties") +
+  theme(panel.background = element_rect(color = "blue", fill = "lightblue"))
+```
+
+* 2-4 Plot the maximum of the daily case count and death count for the DMV areas
+
++ interpret 1: In the "Maximum Daily Cases as of 11/13", we can see Prince George's in Maryland has the highest cases in DMV area, following with Montgomery MD and Fairfax VA. 
+
++ interpret 2: In the "Maximum Daily Deaths as of 11/13", we can see Prince George's and Montgomery in Maryland has the highest deaths in DMV area, following with Fairfax VA, which is reasonable since the cases in these three counties are also the highest. 
+```{r}
+full_df_dmv %>% 
+  group_by(date, state, county, fips) %>% 
+  summarise(max_daily_case = max(cases),
+            max_daily_death = max(deaths)) ->
+  dmv_county_plot
+
+# Plot the maximum of the daily case count for the DMV areas
+plot_usmap(data = dmv_county_plot, include = dmv_fips, values = "max_daily_case", color = "blue") +
+  scale_fill_continuous(low = "white", high = "red",
+                        name = "cases", label = scales::comma) +
+  labs(title = "DMV Region",
+       subtitle = paste0("Maximum Daily Cases as of ", 
+                         max(dmv_county_plot$date))) + 
+  theme(panel.background = element_rect(color = "black", fill = "white")) +
+  theme(legend.position = "top")
+
+# Plot the maximum of the daily death count for the DMV areas
+plot_usmap(data = dmv_county_plot, include = dmv_fips, values = "max_daily_death", color = "blue") +
+  scale_fill_continuous(low = "white", high = "red",
+                        name = "cases", label = scales::comma) +
+  labs(title = "DMV Region",
+       subtitle = paste0("Maximum Daily Deaths as of ", 
+                         max(dmv_county_plot$date))) + 
+  theme(panel.background = element_rect(color = "black", fill = "white")) +
+  theme(legend.position = "top")
+```
+

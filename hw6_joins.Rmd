@@ -1,0 +1,329 @@
+---
+title: "hw_6"
+author: "Sihyuan Han"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Identifying Table Keys in the NASA Weather Dataset
+
+```{r}
+library(tidyverse)
+library(help = "nasaweather")
+library("nasaweather")
+data(package = "nasaweather")
+```
+
+* 1-1 What are the data frames in this data set? atmos, borders, elev, glaciers, storms
+
+* 1-2,3 What are the keys in each data frame?
+```{r}
+data("atmos")
+head(atmos)
+
+atmos %>% 
+  group_by(lat,long,year,month) %>% 
+  count() %>% 
+  filter(n>1)
+```
+
+```{r}
+data("borders")
+
+borders %>% 
+  ungroup() %>% 
+  head()
+
+borders %>% 
+  ungroup() %>% 
+  summarize(dist = nrow(distinct(.)))
+nrow(borders)
+
+borders %>% 
+  ungroup() %>% 
+  distinct(.keep_all = TRUE) %>% 
+  group_by(country,long,lat) %>% 
+  count() %>% 
+  filter(n>1)
+```
+
+```{r}
+data("elev")
+head(elev)
+
+elev %>% 
+  group_by(long,lat) %>% 
+  count() %>% 
+  filter(n>1)
+```
+
+```{r}
+data("glaciers")
+head(glaciers)
+
+glaciers %>% 
+  group_by(id) %>% 
+  count() %>% 
+  filter(n>1)
+```
+
+```{r}
+data("storms")
+head(storms)
+
+storms %>% 
+  group_by(name,year,month,day,hour,lat) %>% 
+  count() %>% 
+  filter(n>1)
+```
+
+## Lahman’s Baseball Dataset
+
+```{r}
+library(Lahman)
+help("Lahman-package")
+```
+
+* 2-1
+```{r}
+data("Master")
+data("Batting")
+data("Pitching")
+data("Fielding")
+data("Teams")
+data("Salaries")
+```
+
+* 2-2
+```{r}
+# identify primary key
+Teams %>% 
+  group_by(yearID,teamID) %>% # primary key
+  count() %>% 
+  filter(n>1)
+
+Master %>% 
+  group_by(playerID) %>% # primary key
+  count() %>% 
+  filter(n>1)
+
+Fielding %>% 
+  group_by(playerID,yearID,stint,POS) %>% # primary key
+  count() %>% 
+  filter(n>1)
+```
+
+```{r}
+Teams %>% 
+  filter(yearID >= 1903) %>% 
+  filter(LgWin == "Y") %>% 
+  filter(!is.na(WSWin)) %>% # not played each year
+  filter(teamID == "BOS") %>% 
+  select(yearID,teamID,LgWin) ->
+  team_bos_Lgwin
+
+team_bos_Lgwin %>% 
+  left_join(Fielding, by = c("yearID","teamID")) %>% 
+  left_join(Master, by = "playerID") %>% 
+  filter(stint >= 1) %>% 
+  select(nameFirst,nameLast,yearID) %>% 
+  distinct() %>% 
+  arrange(nameLast) %>% 
+  head(n=10)
+```
+
+* 2-3-a
+```{r}
+# head(Salaries)
+Salaries %>%
+  group_by(yearID,playerID) %>%
+  summarize(salary_total = sum(salary, na.rm = TRUE)) ->
+  Salaries_3_a
+Salaries_3_a
+```
+
+* 2-3-b
+```{r}
+Batting %>% 
+  left_join(Master, by = "playerID") %>% 
+  select(AB,H,playerID,yearID) %>% 
+  group_by(yearID,playerID) %>% 
+  summarize(sum_bats = sum(AB), sum_hits = sum(H)) ->
+  Batting_3_b
+Batting_3_b
+```
+
+* 2-4-a
+```{r}
+Batting_3_b %>% 
+  left_join(Salaries_3_a, by = c("yearID","playerID")) %>% 
+  mutate(bat_avg = sum_hits/sum_bats) %>% 
+  filter(sum_bats >= 400) %>% 
+  filter(yearID >= 1985) ->
+  Batting_4_a
+Batting_4_a
+```
+
+* 2-4-b hexplot
++ Based on the hexplot, we can see batting average between 0.25-0.3 has lower salary than others. 
+```{r}
+Batting_4_a %>% 
+  ggplot(aes(bat_avg, salary_total))+
+  geom_hex()+
+  scale_y_log10()
+```
+
+* 2-4-c
++ We can learn from the plot(OLS) that the relationship between batting average and salary is positive, so when batting average is high, the salary is high.
+```{r}
+Batting_4_a %>% 
+  ggplot(aes(bat_avg, salary_total))+
+  scale_y_log10()+
+  geom_smooth(se = FALSE, method = "lm")
+```
+
+* 2-4-d
++  The pairwise complete correlation between batting average and log of the total salary by year has negative coefficients. As year pass, the correlation is decreasing. 
+```{r}
+Batting_4_a %>%
+  group_by(yearID) %>% 
+  summarize(pc_cor = cor(bat_avg, log(salary_total), use="pairwise")) ->
+  Batting_pc_cor
+Batting_pc_cor
+
+Batting_pc_cor %>% 
+  ggplot(aes(yearID, pc_cor))+
+  geom_smooth(se = FALSE, method = "lm")
+```
+
+* 2-5
+```{r}
+head(Master)
+Salaries_3_a %>% 
+  left_join(Master, by = "playerID") %>% 
+  filter(nameFirst == "John") %>% 
+  filter(yearID %% 2 == 0) %>% 
+  arrange(desc(salary_total), n = 10) %>% 
+  select(yearID, nameFirst, nameLast, salary_total)
+```
+
+### NYC Flights
+
+* 3-1
+```{r}
+library(dbplyr)
+library(RSQLite,lib.loc = "C:/Users/Stephanie/Documents/R/win-library/4.0")
+
+conn <- dbConnect(drv = SQLite(), dbname = "../R_data/nycflights13.sqlite")
+```
+
+* 3-2
+```{r}
+dbListTables(conn)
+```
+
+* 3-3
+```{r}
+airlines_db <- tbl(conn,"airlines")
+airports_db <- tbl(conn,"airports")
+flights_db <- tbl(conn,"flights")
+planes_db <- tbl(conn,"planes")
+weather_db <- tbl(conn,"weather")
+```
+
+* 3-4 in-memory data frame, only for flights that actually departed
+```{r}
+head(airports_db)
+head(flights_db)
+flights_db %>% 
+  collect() ->
+  flights
+
+airports_db %>% 
+  collect() ->
+  airports
+
+flights %>% 
+  summarize(across(everything(),~sum(is.na(.))))
+
+flights %>% 
+  filter(!is.na(dep_time)) ->
+  flights_check_dep
+head(flights_check_dep)
+```
+
+* 3-5  in-memory data frame, airports served by NYC airports, 104 rows
+```{r}
+airports %>% 
+  semi_join(flights, by = c("faa" = "dest")) ->
+  airports_dest
+
+airports %>% 
+  semi_join(flights, by = c("faa" = "origin")) ->
+  airports_origin
+
+rbind(airports_dest, airports_origin) ->
+  airports_by_NYC
+
+airports_by_NYC
+```
+
+* 3-6
+```{r}
+flights_check_dep %>% 
+  anti_join(airports_by_NYC, by = c("dest" = "faa")) %>% 
+  group_by(dest) %>% 
+  summarize(total_flights = n())
+```
+
+* 3-7
+```{r}
+flights_check_dep %>%
+  inner_join(airports, by = c("dest" = "faa")) %>% 
+  group_by(name,dest) %>% 
+  summarize(sum = n()) %>% 
+  arrange(desc(sum)) %>% 
+  head(n = 10) ->
+  flights_dest_top10
+flights_dest_top10
+```
+
+* 3-8-a
+```{r}
+head(airlines_db)
+airlines_db %>% 
+  collect() ->
+  airlines
+
+airlines %>% 
+  semi_join(flights, by = "carrier") ->
+  airlines_nyc
+airlines_nyc
+```
+
+* 3-8-b
+```{r}
+flights_dest_top10 %>% 
+  left_join(flights, by = "dest") %>% 
+  group_by(name, dest, carrier) %>% 
+  summarize(median_arr_delay = median(arr_delay, na.rm = TRUE),
+            flights = n()) %>% 
+  group_by(dest) %>% 
+  arrange((median_arr_delay)) %>% 
+  slice(1:2) %>% 
+  select(-carrier)
+```
+
+* 3-8-c
+```{r}
+flights_dest_top10 %>% 
+  left_join(flights, by = "dest") %>% 
+  group_by(name, dest, carrier) %>% 
+  summarize(median_arr_delay = median(arr_delay, na.rm = TRUE),
+            flights = n()) %>% 
+  arrange(desc(median_arr_delay)) %>% 
+  head(n = 10) %>% 
+  select(-carrier)
+```
+

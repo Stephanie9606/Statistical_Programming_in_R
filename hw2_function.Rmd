@@ -1,0 +1,184 @@
+---
+title: "hw_2"
+author: "Sihyuan Han"
+date: "2020/09/09"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+library(tidyverse)
+```
+
+
+# Implement a fizzbuzz() function
+
+```{r}
+fizzbuzz <- function(x){
+  if (x%%3 == 0 && x%%5 != 0) {
+    return("fizz")
+  } else if (x%%3 != 0 && x%%5 == 0) {
+    return("buzz")
+  } else if (x%%3 == 0 && x%%5 == 0) {
+    return("fizzbuzz")
+  } else {
+    return(x)
+  }
+}
+fizzbuzz(3)
+fizzbuzz(5)
+fizzbuzz(15)
+fizzbuzz(16)
+```
+
+* 1-c
+
+```{r}
+fizzbuzz <- function(x){
+  if (x%%3 == 0 && x%%5 != 0) {
+    return("fizz")
+  } else if (x%%3 != 0 && x%%5 == 0) {
+    return("buzz")
+  } else if (x%%3 == 0 && x%%5 == 0) {
+    return("fizzbuzz")
+  } else {
+    return(x)
+  }
+}
+fizzbuzz(3)
+fizzbuzz(5)
+fizzbuzz(15)
+fizzbuzz(2)
+```
+
+* 1-e include error checking
+
+```{r, error=TRUE}
+fizzbuzz <- function(x){
+stopifnot(length(x)==1)
+  stopifnot(is.numeric(x))
+  if (x%%3 == 0 && x%%5 != 0) {
+    return("fizz")
+  } else if (x%%3 != 0 && x%%5 == 0) {
+    return("buzz")
+  } else if (x%%3 == 0 && x%%5 == 0) {
+    return("fizzbuzz")
+  } else {
+    return(x)
+  }
+}
+fizzbuzz("cat")
+fizzbuzz(c(1,5))
+```
+
+* 1-f completing Roxygen comments in the code chunk
+
+```{r}
+#' fizzbuzz #Title
+#' fizzbuzz(x%%3 == 0 && x%%5 == 0) # Useage
+#' @param x Input a number
+#'
+#' @return If the input number is divisible by three, five or three and five, or none
+#'
+#' @examples
+#' fizzbuzz(3)
+#' fizzbuzz(5)
+#' fizzbuzz(15)
+#' fizzbuzz(2)
+fizzbuzz <- function(x){
+stopifnot(length(x)==1)
+  stopifnot(is.numeric(x))
+  if (x%%3 == 0 && x%%5 != 0) {
+    return("fizz")
+  } else if (x%%3 != 0 && x%%5 == 0) {
+    return("buzz")
+  } else if (x%%3 == 0 && x%%5 == 0) {
+    return("fizzbuzz")
+  } else {
+    return(x)
+  }
+}
+```
+
+
+* 1-g Create a script out of your fizzbuzz() function
+
+```{r}
+cat(readr::read_file("fizzbuzz_s.R"))
+```
+```{r}
+source('~/stat_612(R)/Rwk2_hw2/fizzbuzz_s.R')
+fizzbuzz_s(35)
+fizzbuzz_s(18)
+fizzbuzz_s(45)
+fizzbuzz_s(-1)
+```
+
+
+## Create a new cut() function
+
+```{r}
+show_temp <- function(x){seq(-20,100,by=5)
+cut(x, c(-Inf,0,10,20,30,Inf), right = TRUE, labels = c("freezing","cold","cool","warm","hot"))
+}
+show_temp(31)
+show_temp(30)
+show_temp(10)
+show_temp(-10)
+```
+
+* Change the call to cut() to handle < instead of <= in the comparisons
+
+```{r}
+show_temp <- function(x){seq(-20,100,by=5)
+cut(x, c(-Inf,0,10,20,30,Inf), right = FALSE, labels = c("freezing","cold","cool","warm","hot"))
+}
+show_temp(31)
+show_temp(30)
+show_temp(10)
+show_temp(-10)
+```
+
+* 2-c What is the other chief advantage of the cut() method for this problem?
+    + Ans: If there are many values in temp, using cut() can easily define the break instead of writing very long if-else codes
+
+
+###  Using the Forward Pipe
+
+```{r}
+sample(1:10,1000,replace=TRUE) %>%
+  mean() %>%
+  exp()
+```
+
+
+#### Calculate a proportion
+
+```{r}
+rnorm(100,10,9)
+a <- rnorm(100,10,9)
+a>12
+```
+
+
+##### Logical Comparisons and Subsetting
+
+```{r}
+x <- c(TRUE, FALSE, TRUE, TRUE)
+y <- c(FALSE, FALSE, TRUE, FALSE)
+z <- NA
+x & y
+x & z
+!(x | y)
+x | y
+y | z
+x[y]
+y[x]
+x[x|y]
+```
+
+
+
+
+

@@ -1,0 +1,281 @@
+---
+title: "hw_dplyr_p1p2"
+author: "Sihyuan Han"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+Date: 2020/10/01
+---
+
+# The flights data frame from the nycflights13 package
+
+1. Load and review the data
+
+```{r}
+library(tidyverse)
+library(nycflights13)
+data("flights")
+# What are the variables?
+names(flights)
+# How many observations (rows) are there?
+nrow(flights)
+# Look at the first three rows
+head(flights, n = 3)
+```
+
+2. Worst Plane to Fly
+
+```{r}
+# Which planes (tailnum) have the three worst (highest) average departure delay record?
+flights%>%
+  filter(!is.na(dep_delay))%>%
+  slice_max(dep_delay, n=3)%>%
+  select(tailnum,dep_delay)
+# How many flights did it make?
+flights%>%
+  filter(!is.na(dep_delay))%>%
+  slice_max(dep_delay, n=3)%>%
+  select(tailnum,flight,dep_delay)
+# Now only look tailnums where each flew more than 12 flights and find the three tailnums with the highest average departure delay
+flights%>%
+  filter(flight > 12)%>%
+  filter(!is.na(dep_delay))%>%
+  slice_max(dep_delay, n=3)%>%
+  select(tailnum)
+```
+
+3. Best Time of Day to Fly
+
+```{r}
+flights%>%
+  group_by(hour)%>%
+  summarize(mean_delay = mean(arr_delay, na.rm = TRUE) +
+              mean(dep_delay, na.rm = TRUE))%>%
+  ggplot(aes(x = as.numeric(hour), y = mean_delay)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  theme_bw() +
+  xlab("Hour") +
+  ylab("Mean Delay Time")
+```
+
+4. Worst Flight Numbers for each Destination
+
+```{r}
+flights%>%
+  select(dest,arr_delay,tailnum)%>%
+  group_by(dest)%>%
+  filter(arr_delay > 0)%>%
+  mutate(total_arr_delay = sum(arr_delay, na.rm = TRUE),
+         pro_arr_delay = arr_delay/total_arr_delay, na.rm = TRUE)
+```
+
+5. Destinations with Multiple Carriers from NYC Area
+
+```{r}
+flights %>%
+  group_by(dest)%>%
+  summarise(num_carrier = n_distinct(carrier))%>%
+  filter(num_carrier >= 2)%>%
+  arrange(desc(num_carrier))%>%
+  slice(25:30)
+```
+
+6. Effect of the Delay in the Flight before Yours
+
+```{r}
+# Using lag() and cor()...
+flights%>%
+  filter(!is.na(dep_delay))%>%
+  mutate(pre_dep_delay = lag(dep_delay,default = 0)) ->
+  flights_dep_delay
+
+cor(flights_dep_delay$dep_delay, flights_dep_delay$pre_dep_delay)
+
+# EXTRA CREDIT...
+flights_dep_delay%>%
+  slice_sample(n = 5000)%>%
+  ggplot(aes(x = dep_delay,y = pre_dep_delay)) +
+  geom_point()
+```
+
+## Star Wars Characters
+
+1. Load the data into R and load any necessary packages
+
+```{r}
+library(tidyverse)
+data("starwars")
+```
+
+2. Use appropriate R code to determine which individuals have missing gender. Make sure to only print out their names and heights, arranged in ascending order of height
+
+```{r}
+starwars%>%
+  filter(is.na(gender) == TRUE)%>%
+  select(name, height)%>%
+  arrange(height)
+```
+
+3. It seems all individuals in part 2 are droids. Change their gender to "droid" and save to the dataframe
+
+```{r}
+starwars$gender[is.na(starwars$gender)] <- "droid"
+starwars%>%
+  select(name, height, gender)%>%
+  filter(gender == "droid")
+```
+
+4. BMI
+
+```{r}
+# Calculate the BMI and add it to the starwars data frame
+starwars%>%
+  mutate(bmi = mass / (height/100)^2)%>%
+# Sanity check: The median BMI should be in the 20-30 range
+  mutate(Sanity_check = case_when(
+    bmi>=20 & bmi<=30 ~ "checked"
+  ))
+```
+
+5. Calculate the median and mean height for each gender as well as the number of individuals
+
+```{r}
+starwars%>%
+  group_by(gender)%>%
+  summarize(mean_height = mean(height, na.rm = TRUE),
+            median_height = median(height, na.rm = TRUE),
+            number_of_individuals = length(gender))
+```
+
+6. Make boxplots of gender vs BMI. Include only masculine, feminine, and droids. Use the black and white theme
+
+```{r}
+starwars%>%
+  mutate(bmi = mass / (height/100)^2 )%>%
+  filter(!is.na(gender))%>%
+ggplot(aes(x = gender,y = bmi)) +
+geom_boxplot() +
+  scale_y_log10() +
+  theme_bw() +
+  xlab("Gender") +
+  ylab("BMI")
+```
+
+7. Make scatterplots of height vs mass, faceting by gender
+
+```{r}
+starwars%>%
+  ggplot(aes(x = mass,y = height)) +
+  geom_point() +
+  facet_wrap( ~ gender) +
+  xlab("Mass") +
+  ylab("Height")
+```
+
+8. Reproduce the following plot
+
+```{r}
+starwars%>%
+  filter(birth_year>0 & birth_year<120)%>%
+  mutate(gender = na_if(gender, "droid"))%>%
+  ggplot(aes(x = birth_year,y = height, col = gender)) +
+  geom_point() +
+  geom_smooth(se = FALSE, color = "black", linetype = "dashed") +
+  theme_bw() +
+  xlab("Birth Year") +
+  ylab("Height")
+```
+
+### The Palmer Penguins Package
+
+1. 
+
+```{r}
+library(tidyverse)
+library(palmerpenguins)
+data("penguins")
+head(penguins)
+```
+
+2. Bill Ratio
+
+```{r}
+penguins%>%
+  mutate(fb_ratio=flipper_length_mm/bill_length_mm)
+```
+
+3. Using the data frame from 2., eliminate the penguins with an fb_ration of NA and show the highest four penguins of each sex with only the character variables and fb_ratio
+
+```{r}
+penguins%>%
+  mutate(fb_ratio=flipper_length_mm/bill_length_mm)%>%
+  filter(!is.na(fb_ratio))%>%
+  select(sex,fb_ratio)%>%
+  group_by(sex)%>%
+  slice_max(fb_ratio, n=4)
+```
+
+4. For each species and sex, calculate the median of the numeric variables
+
+```{r}
+penguins%>%
+  group_by(species,sex)%>%
+  summarize(across(where(is.numeric),
+                  ~ median(.x, na.rm = TRUE)))
+```
+
+4.1 Then use an appropriate plot to show median bill length vs bill depth by species and sex
+
+```{r}
+penguins%>%
+  group_by(species,bill_depth_mm,sex)%>%
+  summarize(median_bill_length = median(bill_length_mm,na.rm = TRUE)) ->
+  sum_penguins
+
+ggplot(data = sum_penguins,
+       mapping = aes(x = bill_depth_mm, y = median_bill_length,
+                     col = species, linetype = sex))+
+  geom_line()+
+  theme_bw()+
+  xlab("Bill Depth")+
+  ylab("Median Bill Length")+
+  scale_color_discrete(name = "Species")+
+  scale_linetype_discrete(name = "Sex")
+```
+
+4.2 Interpret the plot in one sentence: Female penguin tends to have shorter bill Length than male penguin; Chinstrap and Gentoo species tend to have longer bill length than Adelie.
+
+5. How many rows have no missing values?
+
+```{r}
+penguins%>%
+  filter(across(everything(),
+                ~ !is.na(.x)))%>%
+  nrow()
+```
+
+6. How many unique values are there for each of the columns that end in "_mm" for each sex
+
+```{r}
+penguins%>%
+  group_by(sex)%>%
+  summarize(across(contains("_mm"),
+                   ~ length(unique(.x))))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,168 @@
+---
+title: "hw_3"
+author: "Sihyuan Han"
+date: "9/16/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+* 1. Load the tidyverse and ggthemes packages and the msleep data set.
+* 2. How many mammals are in the msleep data frame? How many variables?
+```{r}
+library(tidyverse)
+library(ggthemes)
+library(ggplot2)
+```
+
+```{r}
+data("msleep")
+head(msleep)
+# How many mammals are in the msleep data frame?
+nrow(msleep)
+# How many variables?
+ncol(msleep)
+```
+
+* 3.
+* Write out a question about the relationship
+ + Ans: Does larger weight mammals usually have a longer sleep time? 
+* What is your response variable and what type is it? 
+ + Ans: sleep_total
+* What is your explanatory variable and what type is it? 
+ + Ans: bodywt
+* What is the appropriate type of plot given the types of variables? 
+ + Ans: geom_point()
+* Create the appropriate plot with body weight against the total amount of sleep
+
+```{r}
+msleep %>%
+ggplot(aes(bodywt,sleep_total)) +
+geom_point()
+```
+
+* Interpret the plot in one sentence: what does the shape tell you about the relationship?
+  + Ans: It indicates a negative relationship between body weight and sleep total, as body weight increases, sleep total decreases
+
+* 4. Create three plots
+* Which plot appears best (most linear) to you and why?
+  + Ans: The "log(x) and log (y)" one. We can see negative relationship between body weight and total sleep hours based on the plot, the other two plots is hard to tell their connection
+
+```{r}
+msleep %>%
+ggplot(aes(bodywt,sleep_total)) +
+geom_point() +
+  scale_x_log10()
+
+msleep %>%
+ggplot(aes(bodywt,sleep_total)) +
+geom_point() +
+  scale_y_log10()
+
+msleep %>%
+ggplot(aes(bodywt,sleep_total)) +
+geom_point() +
+  scale_x_log10() +
+  scale_y_log10()
+```
+
+* 5. Color code the plot in part 4 by the diet of the animals (vore)
+
+```{r}
+msleep %>%
+ggplot(aes(x = bodywt,y = log(sleep_total),color = vore)) +
+geom_point() +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_bw() +
+  xlab("Body Weight") +
+  ylab("Sleep Total") +
+  ggtitle("Sleep Total vs Body Weight by Diet")
+```
+
+* 6. Copy the plot from part 5 and add an OLS line (without standard errors) for each vore category
+* Does the effect of body weight on sleep total appear larger for some diets?
+ + Ans: Yes, carnivore and herbivore have obivious effect of body weight on sleep total
+
+```{r}
+msleep %>%
+ggplot(aes(x = bodywt,y = log(sleep_total),color = vore)) +
+geom_point() +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_smooth(se = FALSE, method = lm) +
+  theme_bw() +
+  xlab("Body Weight") +
+  ylab("Sleep Total") +
+  ggtitle("Sleep Total vs Body Weight by Diet")
+```
+
+* 7. 
+* In one sentence, how does this line compare to the individual lines?
+ + Ans: The overall OLS line shows the average relatioship between body weight and sleep total among all vore in this data.
+
+```{r}
+msleep %>%
+ggplot(aes(x = bodywt,y = log(sleep_total),color = vore)) +
+geom_point() +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_smooth(se = FALSE, method = lm, color = "black", linetype = "dashed", size = 0.5) +
+  geom_smooth(se = FALSE, method = lm) +
+  theme_bw() +
+  xlab("Body Weight") +
+  ylab("Sleep Total") +
+  ggtitle("Sleep Total vs Body Weight by Diet")
+```
+
+
+* 8. Copy the plot from 7 and change the title of the legend to “Diet”
+
+```{r}
+msleep %>%
+ggplot(aes(x = bodywt,y = log(sleep_total),color = vore)) +
+geom_point() +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_smooth(se = FALSE, method = lm, color = "black", linetype = "dashed", size = 0.5) +
+  geom_smooth(se = FALSE, method = lm) +
+  scale_color_discrete(name = "Diet") +
+  theme_bw() +
+  xlab("Body Weight") +
+  ylab("Sleep Total") +
+  ggtitle("Sleep Total vs Body Weight by Diet")
+```
+
+
+* 9. Reproduce the following plot
+
+```{r}
+msleep %>%
+ggplot(aes(x = vore,y = sleep_total)) +
+geom_boxplot(aes(fill = vore),outlier.shape = 17,show.legend = FALSE) +
+  scale_y_log10() +
+  theme_bw() +
+  scale_fill_colorblind() +
+  xlab("Diet") +
+  ylab("Sleep Total")
+```
+
+* 10. Reproduce the following plot
+
+```{r}
+msleep %>%
+ggplot(aes(x = bodywt,y = sleep_total)) +
+geom_point() +
+  geom_smooth(se = FALSE,method = lm, colour = "forestgreen") +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_bw() +
+  facet_wrap( ~ vore) +
+  xlab("Body Weight") +
+  ylab("Sleep Total") +
+  ggtitle("Sleep Total vs Body Weight by Diet (Logged Scales)")
+```
+
+* 11. Extra Credit Anti-example: 10 bad charts by Consultant’s Mind
+ + Ans: (1) I think Bad chart #8 is the most egregious one, because there are no labels to both x and y axis, people can never understand what the chart is going to indicate about.
+ + Ans: (2) with ggplot2, we have to write the data in so it can shows the data of x and y to create a correct plot, this way we won't forget what x and y refers to, and can also change the labels' name for clear understanding

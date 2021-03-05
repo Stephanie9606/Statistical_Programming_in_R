@@ -1,0 +1,214 @@
+---
+title: "hw_7"
+arthor: "Sihyuan Han"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Scrabble Words
+
+```{r}
+library(tidyverse)
+library(dplyr)
+```
+
+
+* 1-1 How many words are there?
+```{r}
+scrabble_w <- read_csv("../R_data/words.txt")
+head(scrabble_w)
+scrabble_w[is.na(scrabble_w)] <- "NA"
+scrabble_w %>% 
+  summarise(across(everything(), ~sum(is.na(.))))
+nrow(scrabble_w)
+```
+
+* 1-2 How many words either begin or end in “X”?
+```{r}
+scrabble_w %>% 
+  filter(str_detect(word, "^X") | str_detect(word, "X$")) %>% 
+  nrow()
+```
+
+* 1-3 How many words contain all of the vowels?
+```{r}
+scrabble_w %>% 
+  filter(str_detect(word, "A") & str_detect(word, "E") & str_detect(word, "I") & str_detect(word, "O") & str_detect(word, "U")) ->
+  scrabble_w_vowels
+  nrow(scrabble_w_vowels)
+```
+
+* 1-4 What are the shortest words that contain all of the vowels?
+```{r}
+scrabble_w_vowels %>% 
+  mutate(length = str_length(word)) %>% 
+  arrange(length) %>% # shortest is 7 letters
+  filter(length == 7)
+```
+
+* 1-5 Update the data frame to include a new column of words where you switch the first and last letters of all of the words and a second column to indicate if they are still valid words.
+```{r}
+scrabble_w %>% 
+  mutate(switch_word = str_replace_all(word, "^([A-Z])(.*)([A-z])$", "\\3\\2\\1")) %>% 
+  mutate(still_word = switch_word %in% word) ->
+  valid_word_check
+head(valid_word_check)
+```
+
+* 1-6  How many of the words that are still valid words after switching the first and last letters have different first and last letters?
+```{r}
+valid_word_check %>% 
+  filter(still_word == TRUE) ->
+  still_word_df # still words
+
+still_word_df %>% 
+  filter(str_detect(word, "^(.)(.*)\\1$")) -> # same first and last letter
+  same_FL
+still_word_df %>% 
+  anti_join(same_FL) ->
+  diff_FL
+
+head(diff_FL)
+nrow(diff_FL)
+```
+
+* 1-7 What are the longest words that are still words after switching the first and last letters and where the first and last letters are different?
+```{r}
+diff_FL %>% 
+  mutate(length = str_length(word)) %>% 
+  arrange(desc(length)) %>% # longest is 14 letters
+  filter(length == 14)
+```
+
+* 1-8 Scrabble Scores
+
+* 1-8-a
+```{r}
+score_word <- function(x){
+  low <- c("A","E","I","O","U","D","L","M","N","R","S","T","Y")
+  med <- c("B","C","F","G","H","K","P","W", "V")
+  high <- c("J","Q","X","Z")
+  points <- c(1,4,10)
+  sum_score <- (str_count(x, "[AEIOUDLMNRSTY]")*1 + str_count(x, "[BCFGHKPWV]")*4 + str_count(x, "[JQXZ]")*10)
+}
+scrabble_w %>% 
+  mutate(points = score_word(word)) ->
+  scrabble_w_scores
+head(scrabble_w_scores)
+```
+
+* 1-8-b
+```{r}
+scrabble_w_scores %>% 
+  mutate(length = str_length(word)) %>%
+  filter(length == 7) %>% 
+  slice_max(points, n=2)
+```
+
+* 1-8-c
+```{r}
+# three highest scoring words with no vowels
+scrabble_w_scores %>% 
+  filter(str_detect(word, "^[^AEIOU]+$")) %>% 
+  slice_max(points, n=3)
+# three longest scoring words with no vowels
+scrabble_w_scores %>% 
+  mutate(length = str_length(word)) %>% 
+  filter(str_detect(word, "^[^AEIOU]+$")) %>% 
+  arrange(desc(length)) %>% 
+  slice(1:3)
+```
+
+* 1-8-d
+```{r}
+scrabble_w_scores %>% 
+  mutate(vowels_count = str_count(word, "[AEIOU]")) %>% 
+  mutate(length = str_length(word)) %>% 
+  filter(length <= 7) %>% 
+  ggplot(aes(x = as.factor(vowels_count),y = points)) +
+  geom_boxplot() +
+  xlab("Number of Vowels") +
+  ylab("Score") +
+  ggtitle("Possible Scores for Seven-Letter Words")
+```
+
+* 1-8-f Interpret: As the plot shows that 2-4 vowels in a word has approximately same average of score , which is higher than other words with less or more vowels. 
+
+## Bank Data
+
+* 2-1 show only how many rows there are in the data frame, Show a random sample of 2 percent of the rows.
+```{r}
+bank_df <- read_csv("../R_data/fed_large_c_bank_ratings.csv")
+nrow(bank_df)
+bank_df %>% 
+  slice_sample(prop = .02)
+```
+
+* 2-2 
+```{r}
+bank_df %>% 
+  separate(name,
+           into = c("name", "alternate_name"),
+           sep = "/",
+           extra = "drop") ->
+  bank
+head(bank)
+```
+
+* 2-3 How many bank primary names begin with a digit?
+```{r}
+bank %>% 
+  filter(str_detect(name, "^\\d")) %>% 
+  nrow()
+```
+
+* 2-4-a  How many of the bank primary names have the letters “BANK” in them? “BANKING” counts
+```{r}
+bank %>% 
+  filter(str_detect(name, "BANK")) %>% 
+  nrow()
+```
+
+* 2-4-b How many of the bank primary names have the stand-alone word “BANK” in them? “BANKING” does not count
+```{r}
+bank %>% 
+  filter(str_detect(name, "^BANK\\s") | str_detect(name, "\\sBANK\\s") | str_detect(name, "\\sBANK$")) %>% 
+  nrow()
+```
+
+* 2-5-a
+```{r}
+bank %>% 
+  mutate(name = str_replace_all(name, "BK", "BANK")) ->
+  bank_newname
+head(bank_newname)
+```
+
+* 2-5-b
+```{r}
+bank_newname %>%
+  mutate(position = 
+  ifelse(str_detect(name, "^BANK"), "start",
+  ifelse(str_detect(name, "BANK$"), "end",
+  ifelse(str_detect(name, "\\s(.*)BANK(.*)\\s"), "middle", "none")))) ->
+  bank_wposition
+head(bank_wposition)
+```
+
+* 2-5-c
+```{r}
+bank_wposition %>% 
+  group_by(position) %>% 
+  summarise(prop = n()/nrow(bank_wposition))
+```
+
+* 2-6 Interpret: The position of the word "BANK" doesn't have significant relationship to the log of total assets.
+```{r}
+bank_wposition %>% 
+  ggplot(aes(x = position, y = consolidated_assets)) +
+  geom_boxplot() +
+  scale_y_log10()
+```
+
+
