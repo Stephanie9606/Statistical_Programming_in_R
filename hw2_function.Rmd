@@ -3,8 +3,8 @@ title: "hw_2"
 author: "Sihyuan Han"
 date: "2020/09/09"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r}

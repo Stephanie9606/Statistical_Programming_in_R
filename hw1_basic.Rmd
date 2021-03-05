@@ -3,10 +3,10 @@ title: "hw_1"
 authir: "Sihyuan Han"
 date: '2020-09-03'
 output:
-  pdf_document:
-    number_sections: yes
   html_document:
     df_print: paged
+  pdf_document:
+    number_sections: yes
   word_document: default
 urlcolor: blue
 ---
