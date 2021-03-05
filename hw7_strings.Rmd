@@ -2,8 +2,8 @@
 title: "hw_7"
 arthor: "Sihyuan Han"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 # Scrabble Words
@@ -16,7 +16,7 @@ library(dplyr)
 
 * 1-1 How many words are there?
 ```{r}
-scrabble_w <- read_csv("../R_data/words.txt")
+scrabble_w <- read_csv("words.txt")
 head(scrabble_w)
 scrabble_w[is.na(scrabble_w)] <- "NA"
 scrabble_w %>% 
